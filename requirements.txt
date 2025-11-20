@@ -1,0 +1,8 @@
+Flask
+Pyjwt
+Joblib
+Numpy
+SQLAlchemy
+flask_migrate
+flask_jwt_extended
+Alembic
