@@ -1,0 +1,8 @@
+# Ambiente virtual
+venv/
+Venv/
+ENV/
+env/
+
+# Arquivos do VSCODE
+.vscode/
