@@ -55,7 +55,7 @@ class Prediction(Base):
 
 Base.metadata.create_all(engine)
 
-model   = joblib.load("modelo_iris.pkl")
+model   = joblib.load("../modelo_iris.pkl")
 logger.info("Modelo carregado com sucesso.")
 
 def create_token(username):
