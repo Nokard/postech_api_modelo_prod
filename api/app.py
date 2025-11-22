@@ -20,7 +20,7 @@ from flask_migrate import Migrate
 
 app = Flask(__name__, instance_relative_config=True)
 
-app.config.from_object('api.config')
+app.config.from_object('config')
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -37,6 +37,7 @@ Base                            = declarative_base()
 SessionLocal                    = sessionmaker(bind=engine)
 
 
+predictions_cache = {}
 
 # Cria as tabelas no banco (em produção utilizar Alembic)
 
@@ -50,6 +51,21 @@ class Prediction(Base):
     petal_width     = Column(Float, nullable=False)
     predicted_class = Column(Integer, nullable=False)
     created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+
+class User(Base):
+    __tablename__ = "user"
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    username        = Column(String(80), nullable=False)
+    password        = Column(String(120), nullable=False)
+    created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+
+class User_access(Base):
+    __tablename__ = "user_acess"
+    id              = Column(Integer, primary_key=True, autoincrement=True)
+    username        = Column(String(80), nullable=False)
+    token        = Column(String(120), nullable=False)
+    created_at      = Column(DateTime, default=datetime.datetime.utcnow)
+
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # api/
 ROOT_DIR = os.path.dirname(BASE_DIR)                   # raiz do projeto
@@ -67,7 +83,8 @@ def create_token(username):
         "username":username,
         "exp": datetime.datetime.utcnow() + datetime.timedelta(seconds=app.config['JWT_EXP_DELTA_SECONDS'])
     }
-    token = jwt.encode(payload, app.config['JWT_SECRET'], algorithm=pp.config['JWT_ALGORITHM'])
+    #token = jwt.encode(payload, app.config['JWT_SECRET'], algorithm=app.config['JWT_ALGORITHM'])
+    token = create_access_token(identity=payload)
     return token
 
 def token_required(f):
@@ -78,31 +95,74 @@ def token_required(f):
         return f(*ards, **kwargs)
     return decorated
 
-TEST_USERNAME = 'hugo.dias'
-TEST_PASSWORD = 'pass'
+
+@app.route('/register', methods=["POST"])
+def register():
+    data = request.get_json()
+    
+    username = data.get("username")
+    password = data.get("password")
+
+    with SessionLocal() as session:
+        user = session.query(User).filter(User.username == username).first()
+        
+    
+        if user: return jsonify({"error": f"User {data['username']} already exists"})
+
+        new_user = User(
+            username = data['username'],
+            password = data['password']
+        )
+
+        db.session.add(new_user)
+        db.session.commit()
+        return jsonify({"msg": f"User {data['username']} created"}), 201
+
+
 
 @app.route("/login", methods=["POST"])
 def login():
+    
     data     = request.get_json(force=True)
+
     username = data.get("username")
     password = data.get("password")
-    if username == TEST_USERNAME and password == TEST_PASSWORD:
 
-        token = create_token(username)
-        return jsonify({"token": token})
-    else:
-        return jsonify({"error": "Credenciais inválidas"}), 401
+    with SessionLocal() as session:
+        user  = session.query(User).filter(
+            User.username == username,
+            User.password == password
+            ).first()
+
+        if user:
+
+            token = create_token(username)
+            
+            new_acess = User_access(
+            username = data['username'],
+            token    = token
+            )
+
+            db.session.add(new_acess)
+            db.session.commit()
+            return jsonify({"token": token})
+
+
+
+        
+        else:
+            return jsonify({"error": "User doesnt Exist or Invalid Credentials"}), 401
 
   
 @app.route("/", methods=['GET'])
+@jwt_required()
 def home():
     return jsonify({"msg":"Pagina inicial para ML"}), 200
 
 
-predictions_cache = {}
 
 @app.route("/predict", methods=['POST'])
-#@token_required
+@jwt_required()
 def predict():
     """
     Endpoint protegido para token para obter predição
@@ -171,7 +231,7 @@ def predict():
 
 
 @app.route("/predictions", methods=['GET'])
-# @token_required
+@jwt_required()
 def list_predictions():
     """
     """
