@@ -6,3 +6,4 @@ SQLAlchemy
 flask_migrate
 flask_jwt_extended
 Alembic
+scikit-learn
