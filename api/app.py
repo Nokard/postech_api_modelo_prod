@@ -51,11 +51,15 @@ class Prediction(Base):
     predicted_class = Column(Integer, nullable=False)
     created_at      = Column(DateTime, default=datetime.datetime.utcnow)
 
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))  # api/
+ROOT_DIR = os.path.dirname(BASE_DIR)                   # raiz do projeto
+
+MODEL_PATH = os.path.join(ROOT_DIR, "modelo_iris.pkl")
 
 
 Base.metadata.create_all(engine)
 
-model   = joblib.load("../modelo_iris.pkl")
+model   = joblib.load(MODEL_PATH)
 logger.info("Modelo carregado com sucesso.")
 
 def create_token(username):
