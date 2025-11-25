@@ -16,11 +16,19 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 
+from dotenv import load_dotenv
 
+load_dotenv()
 
 app = Flask(__name__, instance_relative_config=True)
 
 app.config.from_object('config')
+app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("SQLALCHEMY_DATABASE_URI")
+app.config['JWT_EXP_DELTA_SECONDS']         = int(os.getenv("JWT_EXP_DELTA_SECONDS", 3600))
+app.config['SQLALCHEMY_TRACK_MODIFICATION'] = os.getenv("SQLALCHEMY_TRACK_MODIFICATION")
+
+app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
+app.config['JWT_ALGORITHM'] = os.getenv('JWT_ALGORITHM')
 
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
@@ -84,7 +92,7 @@ def create_token(username):
         "exp": datetime.datetime.utcnow() + datetime.timedelta(seconds=app.config['JWT_EXP_DELTA_SECONDS'])
     }
     #token = jwt.encode(payload, app.config['JWT_SECRET'], algorithm=app.config['JWT_ALGORITHM'])
-    token = create_access_token(identity=payload)
+    token = create_access_token(identity=str(username))
     return token
 
 def token_required(f):
