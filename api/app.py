@@ -22,6 +22,7 @@ load_dotenv()
 
 app = Flask(__name__, instance_relative_config=True)
 
+#adding api.config
 app.config.from_object('api.config')
 app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("SQLALCHEMY_DATABASE_URI")
 app.config['JWT_EXP_DELTA_SECONDS']         = int(os.getenv("JWT_EXP_DELTA_SECONDS", 3600))
