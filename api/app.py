@@ -15,6 +15,7 @@ from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
+from sqlalchemy.pool import NullPool
 
 from dotenv import load_dotenv
 
@@ -28,6 +29,11 @@ app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("SQLALCHEMY_DATABASE_URI
 app.config['JWT_EXP_DELTA_SECONDS']         = int(os.getenv("JWT_EXP_DELTA_SECONDS", 3600))
 app.config['SQLALCHEMY_TRACK_MODIFICATION'] = os.getenv("SQLALCHEMY_TRACK_MODIFICATION")
 
+app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
+    # Confirme se você está usando NullPool
+    "poolclass": NullPool, 
+    "pool_pre_ping": True 
+}
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ALGORITHM'] = os.getenv('JWT_ALGORITHM')
