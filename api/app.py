@@ -171,7 +171,6 @@ def login():
 
   
 @app.route("/", methods=['GET'])
-@jwt_required()
 def home():
     return jsonify({"msg":"Pagina inicial para ML"}), 200
 
