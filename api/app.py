@@ -82,7 +82,7 @@ ROOT_DIR = os.path.dirname(BASE_DIR)                   # raiz do projeto
 MODEL_PATH = os.path.join(ROOT_DIR, "modelo_iris.pkl")
 
 
-Base.metadata.create_all(engine)
+#Base.metadata.create_all(engine)
 
 model   = joblib.load(MODEL_PATH)
 logger.info("Modelo carregado com sucesso.")
