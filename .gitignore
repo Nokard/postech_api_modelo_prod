@@ -9,4 +9,4 @@ env/
 
 # Arquivo de configuração
 
-.env
+.envapi/__pycache__/
