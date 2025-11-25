@@ -7,4 +7,5 @@ flask_migrate
 flask_jwt_extended
 Alembic
 dotenv
-sycopg2-binary
+psycopg2-binary
+scikit-learn
