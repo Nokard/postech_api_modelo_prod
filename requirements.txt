@@ -8,3 +8,4 @@ flask_jwt_extended
 Alembic
 dotenv
 psycopg2-binary
+scikit-learn
