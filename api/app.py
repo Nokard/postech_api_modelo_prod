@@ -15,7 +15,8 @@ from sqlalchemy import create_engine, Column, Integer, Float, String, DateTime
 from sqlalchemy.orm import declarative_base, sessionmaker
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
-from sqlalchemy.pool import NullPool
+from flask_bcrypt import Bcrypt
+from flasgger import Swagger
 
 from dotenv import load_dotenv
 
@@ -24,16 +25,11 @@ load_dotenv()
 app = Flask(__name__, instance_relative_config=True)
 
 #adding api.config
-app.config.from_object('api.config')
-app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("POSTGRES_URL_NON_POOLING").replace("postgres://", "postgresql://")
+app.config.from_object('config')
+#app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("POSTGRES_URL_NON_POOLING").replace("postgres://", "postgresql://")
+app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("SQLALCHEMY_DATABASE_URI")
 app.config['JWT_EXP_DELTA_SECONDS']         = int(os.getenv("JWT_EXP_DELTA_SECONDS", 3600))
 app.config['SQLALCHEMY_TRACK_MODIFICATION'] = os.getenv("SQLALCHEMY_TRACK_MODIFICATION")
-
-app.config["SQLALCHEMY_ENGINE_OPTIONS"] = {
-    # Confirme se você está usando NullPool
-    "poolclass": NullPool, 
-    "pool_pre_ping": True 
-}
 
 app.config['JWT_SECRET_KEY'] = os.getenv('JWT_SECRET_KEY')
 app.config['JWT_ALGORITHM'] = os.getenv('JWT_ALGORITHM')
@@ -41,6 +37,8 @@ app.config['JWT_ALGORITHM'] = os.getenv('JWT_ALGORITHM')
 db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
+bcrypt = Bcrypt(app)
+swagger = Swagger(app)
 
 
 # LOGGING
@@ -89,7 +87,7 @@ ROOT_DIR = os.path.dirname(BASE_DIR)                   # raiz do projeto
 MODEL_PATH = os.path.join(ROOT_DIR, "modelo_iris.pkl")
 
 
-#Base.metadata.create_all(engine)
+Base.metadata.create_all(engine)
 
 model   = joblib.load(MODEL_PATH)
 logger.info("Modelo carregado com sucesso.")
@@ -111,9 +109,96 @@ def token_required(f):
         return f(*ards, **kwargs)
     return decorated
 
+  
+@app.route("/", methods=['GET'])
+def home():
+    """
+    Home (Protected)
+    ---
+    tags:
+      - General
+    summary: Home page (requires authentication)
+    description: Returns a simple welcome message. Requires a valid JWT token in the Authorization header.
+
+    security:
+      - bearerAuth: []
+
+    responses:
+      200:
+        description: Successful response
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: "Pagina inicial para ML"
+
+      401:
+        description: Missing or invalid JWT token
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: "Missing Authorization Header"
+    """
+    return jsonify({"msg":" Home Page for Machine Learning API, access /apicods to read the documentation"}), 200
+
 
 @app.route('/register', methods=["POST"])
 def register():
+    """
+    Register a new user
+    ---
+    tags:
+      - Authentication
+    summary: Create a new user account
+    description: Registers a new user by receiving a username and password, checking if the user already exists, and saving the new user with a hashed password.
+    
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                example: "john_doe"
+              password:
+                type: string
+                example: "123456"
+            required:
+              - username
+              - password
+
+    responses:
+      201:
+        description: User successfully registered
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                msg:
+                  type: string
+                  example: "User john_doe created"
+
+      400:
+        description: User already exists
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "User john_doe already exists"
+    """
     data = request.get_json()
     
     username = data.get("username")
@@ -127,7 +212,7 @@ def register():
 
         new_user = User(
             username = data['username'],
-            password = data['password']
+            password = bcrypt.generate_password_hash(data['password']).decode('utf-8')
         )
 
         db.session.add(new_user)
@@ -138,7 +223,54 @@ def register():
 
 @app.route("/login", methods=["POST"])
 def login():
-    
+    """
+    User Login
+    ---
+    tags:
+      - Authentication
+    summary: Authenticate user and return JWT token
+    description: Validates the provided username and password. If valid, generates a JWT token and records the access event.
+
+    requestBody:
+      required: true
+      content:
+        application/json:
+          schema:
+            type: object
+            properties:
+              username:
+                type: string
+                example: "john_doe"
+              password:
+                type: string
+                example: "123456"
+            required:
+              - username
+              - password
+
+    responses:
+      200:
+        description: Successful login. Returns JWT token.
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                token:
+                  type: string
+                  example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+
+      401:
+        description: Invalid username or password
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                error:
+                  type: string
+                  example: "User doesnt Exist or Invalid Credentials"
+    """
     data     = request.get_json(force=True)
 
     username = data.get("username")
@@ -146,11 +278,10 @@ def login():
 
     with SessionLocal() as session:
         user  = session.query(User).filter(
-            User.username == username,
-            User.password == password
+            User.username == username
             ).first()
 
-        if user:
+        if user and bcrypt.check_password_hash(user.password, password):
 
             token = create_token(username)
             
@@ -169,17 +300,11 @@ def login():
         else:
             return jsonify({"error": "User doesnt Exist or Invalid Credentials"}), 401
 
-  
-@app.route("/", methods=['GET'])
-def home():
-    return jsonify({"msg":"Pagina inicial para ML"}), 200
-
-
-
 @app.route("/predict", methods=['POST'])
 @jwt_required()
 def predict():
     """
+    
     Endpoint protegido para token para obter predição
     Corp (JSON):
     {
@@ -248,8 +373,39 @@ def predict():
 @app.route("/predictions", methods=['GET'])
 @jwt_required()
 def list_predictions():
+    
     """
+    Lista de predições (protegido)
+    ---
+    tags:
+      - Predictions
+    summary: Lista as predições armazenadas no banco
+    description: Retorna as predições salvas, ordenadas por ID decrescente. Requer token JWT.
+
+    parameters:
+      - name: limit
+        in: query
+        description: Quantidade de registros retornados
+        required: false
+        schema:
+          type: integer
+          example: 10
+
+      - name: offset
+        in: query
+        description: Número de registros a pular antes de iniciar a listagem
+        required: false
+        schema:
+          type: integer
+          example: 0
+
+    responses:
+      200:
+        description: Lista de predições retornada
+      401:
+        description: Token ausente ou inválido
     """
+
     limit  = int(request.args.get("limit", 10))
     offset = int(request.args.get("offset", 0))
 
