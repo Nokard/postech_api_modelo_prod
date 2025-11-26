@@ -10,4 +10,5 @@ env/
 # Arquivo de configuração
 
 .envapi/__pycache__/
+api/__pycache__
 api/.env
