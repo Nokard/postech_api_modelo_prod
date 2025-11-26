@@ -25,9 +25,8 @@ load_dotenv()
 app = Flask(__name__, instance_relative_config=True)
 
 #adding api.config
-app.config.from_object('config')
-#app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("POSTGRES_URL_NON_POOLING").replace("postgres://", "postgresql://")
-app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("SQLALCHEMY_DATABASE_URI")
+app.config.from_object('api.config')
+app.config['SQLALCHEMY_DATABASE_URI']       = os.getenv("POSTGRES_URL_NON_POOLING").replace("postgres://", "postgresql://")
 app.config['JWT_EXP_DELTA_SECONDS']         = int(os.getenv("JWT_EXP_DELTA_SECONDS", 3600))
 app.config['SQLALCHEMY_TRACK_MODIFICATION'] = os.getenv("SQLALCHEMY_TRACK_MODIFICATION")
 
