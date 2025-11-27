@@ -16,7 +16,6 @@ from sqlalchemy.orm import declarative_base, sessionmaker
 from flask_sqlalchemy import SQLAlchemy
 from flask_migrate import Migrate
 from flask_bcrypt import Bcrypt
-from flasgger import Swagger
 
 from dotenv import load_dotenv
 
@@ -38,7 +37,6 @@ db = SQLAlchemy(app)
 migrate = Migrate(app, db)
 jwt = JWTManager(app)
 bcrypt = Bcrypt(app)
-swagger = Swagger(app)
 
 
 # LOGGING
