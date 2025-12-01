@@ -10,3 +10,4 @@ dotenv
 psycopg2-binary
 scikit-learn
 flask_bcrypt
+flasgger
